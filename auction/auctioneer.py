@@ -9,7 +9,7 @@ import pandas as pd
 
 import networkx as nx
 from auction import Auction
-from models import Clock, Intersection
+from models import Clock
 from nxn import nxNode
 
 from pandas.api.extensions import register_dataframe_accessor
@@ -35,7 +35,7 @@ class Auctioneer(Auction):
                         index=[rnum for n in range(len(self._node.index))]
                         )
         #df.set_index('ts', inplace=True)
-        self.df = self.df.append(df)
+        self.df = pd.concat([self.df, df])
         idx = pd.IndexSlice
         return pd.Series(dict(
                             nodes=self.df,
@@ -51,7 +51,7 @@ class Auctioneer(Auction):
                                             for v in self.sellers()
                                 ],
                                 neighbors=[
-                                            (n,[v for v in self._adj.loc[idx[:,n],:].index])
+                                            (n, list(self[n].index))
                                             for n in self.buyers()
                                 ],
                             )
@@ -74,6 +74,8 @@ class Auctioneer(Auction):
                                             )
             #bid_history.append(bid)
 
+        if buyers.empty:
+            return None
         winner = self.second_price_winner(seller, buyers)
         #print("BUYER",winner,"WON")
         #profit = winner.price - seller.price 
@@ -109,7 +111,8 @@ class Auctioneer(Auction):
                 print("Skipping seller", seller)
                 continue
             won = self.run_local_auction(seller)
-            winners.append(won)
+            if won is not None:
+                winners.append(won)
 
             self.print_auction(seller)
 
@@ -140,11 +143,11 @@ class Auctioneer(Auction):
             if len(neighbors) > 1:
                 if buyer.price <  min([node.price for node in neighbors]):
                     bprice = round(
-                                buyer.price * params.buyer.inc[buyer.name],
+                                buyer.price * params.buyer.inc_factor[buyer.name],
                                 2)
                 elif buyer.price >  max([node.price for node in neighbors]):
                     bprice = round(
-                                buyer.price * params.buyer.dec[buyer.name],
+                                buyer.price * params.buyer.dec_factor[buyer.name],
                                 2)
 
         for v in sorted_sellers:

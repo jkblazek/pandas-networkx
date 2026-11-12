@@ -1,13 +1,10 @@
-import pytest 
+from sim import MarketSim
 
-@pytest.fixture
-def params():
-    params = make_params()
-    return params
 
-@pytest.fixture
-def sim(): 
+def test_simulation_adds_plot_frames(make_params):
     sim = MarketSim(make_params)
-    return sim
+    for round_number in range(1, 4):
+        sim.do_round(round_number)
 
-
+    assert sim.node_history.index.unique().tolist() == [0, 1, 2, 3]
+    assert [frame.name for frame in sim.fig.frames] == ['1', '2', '3']

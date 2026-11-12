@@ -1,67 +1,23 @@
-import pytest
-from .auction import Auction
-from .auctioneer import Auctioneer
-from params import make_params
-from models import Node
+from auction import Auction, Auctioneer
 
 
-def auctioneer():
-    auctioneer = Auctioneer()
-    auctioneer.make_params = make_params
-    auctioneer.make_graph()
-    params = make_params()
-    auctioneer.save_frame()
-    return auctioneer
-
-
-def auction():
+def test_build_auction(make_params):
     auction = Auction()
     auction.make_params = make_params
     auction.make_graph()
-    return auction
 
-@pytest.fixture
-def params():
     params = make_params()
-    return params
+    assert auction.nsellers() == params.nsellers
+    assert auction.nbuyers() == params.nbuyers
+    assert all(auction.nnodes('seller', buyer) >= 2 for buyer in auction.buyers())
 
 
-def test_rsample(params):
-    z = reversed(range(2,params['nnodes']))
-    for n in z: 
-        x = range(2,n)
-        try:
-            u = rsample(x, params['g_max'])
-        except ValueError:
-            raise 'distribution too small'
-    x = range(2,params['nnodes'])
-    z = range(2,params['nnodes'])
-    for n in z: 
-        try:
-            u = rsample(x, n)
-        except ValueError:
-            raise 'g_max too big'
-    for n in z: 
-        x = range(n,params['nnodes'])
-        try:
-            u = rsample(x, params['g_max'])
-        except ValueError:
-            raise 'g_max too big'
- 
-    return 0
- 
+def test_run_auction_round(make_params):
+    auctioneer = Auctioneer()
+    auctioneer.make_params = make_params
+    auctioneer.make_graph()
+    frame = auctioneer.run_auctions(0)
 
-def test_add_node(auction, params):
- 
-    buyer = Node(params['buyer'])
-    try: 
-        auction.add_node(buyer)
-    except ValueError: 
-        raise 'add node to node failed'
-
-
-def test_auction():
-    return auction()
-
-def test_auctioneer():
-    return auctioneer()
+    assert not frame['nodes'].empty
+    assert not frame['edges'].empty
+    assert frame['nodes'].index.unique().tolist() == [0]

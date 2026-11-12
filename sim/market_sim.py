@@ -30,7 +30,7 @@ linecscale = 'icefire'
 class MarketSim:
 
     fig = None
-    auctioneer = Auctioneer()
+
     node_history = pd.DataFrame()
     edge_history = pd.DataFrame()
     results = pd.DataFrame()
@@ -39,21 +39,22 @@ class MarketSim:
         global params, G
         params = make_params()
         params.start_time=time.time()
+        self.auctioneer = Auctioneer()
         G = self.auctioneer
         G.make_params = make_params
         G.make_graph()
         df = G.run_auctions(0)
-        self.node_history = self.node_history.append(df['nodes'])
-        self.edge_history = self.edge_history.append(df['edges'])
+        self.node_history = pd.concat([self.node_history, df['nodes']])
+        self.edge_history = pd.concat([self.edge_history, df['edges']])
         self.make_plot()
 
     def do_round(self, rnum):
         global G
         start = time.time()
         df = G.run_auctions(rnum)
-        self.node_history = self.node_history.append(df['nodes'])
-        self.edge_history = self.edge_history.append(df['edges'])
-        self.results = self.results.append(df['result'])
+        self.node_history = pd.concat([self.node_history, df['nodes']])
+        self.edge_history = pd.concat([self.edge_history, df['edges']])
+        self.results = pd.concat([self.results, df['result']])
         end_time = time.time()
         self.plot(rnum)
         return self.fig 
@@ -116,7 +117,7 @@ class MarketSim:
               ': nbuyers=', G.nbuyers(), 
               ', nsellers=', G.nsellers(),
               ', nframes=', len(self.fig['frames']))
-        print('Completed:', self.result.stack())
+        print('Completed:', self.results.stack())
         #if len(sys.argv) > 1:
         #    for auction in auctioneer.auctions_history[auction_round]:
         #        print(auction, '\t')
@@ -189,7 +190,7 @@ class MarketSim:
                                 'duration': 0, 
                                 'easing': 'linear'
                             }}],
-                    'label': k, 
+                    'label': str(k),
                     'method': 'animate'
                     } for k in keys]
                     )
@@ -247,6 +248,3 @@ class MarketSim:
 
     def show(self):
         self.fig.show()
-
-       
-   

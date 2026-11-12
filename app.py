@@ -1,29 +1,28 @@
-import numpy as np
-import pandas as pd
 import sys
-import random
 import time
-import networkx as nx
+from threading import Thread
 
-import dash
-from dash import dcc
-from dash import html
-from dash.dependencies import Input, Output
+from dash import Dash, Input, Output, dcc, html
 
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-
-from sim import MarketSim
 from params import make_params
+from sim import MarketSim
 
-def get_new_data():
-    global fig
-    while True: #and auction_round < nrounds:
-        try:
-            fig = do_round()
-            time.sleep(.1)
-        except KeyboardInterrupt:
-            executor.shutdown()
-            exit()
+
+app = Dash(__name__)
+sim = MarketSim(make_params)
+fig = sim.fig
+auction_round = 1
+
+app.layout = html.Div([
+    dcc.Graph(id='price', figure=fig),
+    dcc.Interval(id='refresh', interval=1000),
+])
+
+
+@app.callback(Output('price', 'figure'), Input('refresh', 'n_intervals'))
+def refresh_figure(_):
+    return fig
+
 
 def do_round():
     global fig, auction_round
@@ -33,42 +32,18 @@ def do_round():
     return fig
 
 
-app = dash.Dash(__name__)
-executor = ThreadPoolExecutor(max_workers=1)
-  
-
-def make_layout():
-    global fig
-    return html.Div(
-        [
-        html.Br(),
-        html.Br(),
-        html.Br(),
-        dcc.Graph(
-            id='price', 
-            figure=fig, 
-            animate=True
-        ),
-        html.Br(),
-        ])
-
-start_time = time.time()     
-auction_round = 1
-global fig
-sim = MarketSim(make_params)
-fig = sim.fig
-
-app.layout = make_layout
+def run_simulation():
+    while True:
+        do_round()
+        time.sleep(0.1)
 
 
-# Execute with parameters
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        executor.submit(get_new_data)
-        app.run_server(debug=True, use_reloader=False) 
+    if '--dashboard' in sys.argv:
+        Thread(target=run_simulation, daemon=True).start()
+        app.run()
     else:
-        get_new_data()
-
-
-sys.modules[__name__] = make_params
-
+        try:
+            run_simulation()
+        except KeyboardInterrupt:
+            pass

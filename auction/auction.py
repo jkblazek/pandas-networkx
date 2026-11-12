@@ -47,7 +47,7 @@ class Auction(nxNode):
             #pos = np.clip(pos, 0, params.clamp)
             self.layout[node.name] = pos
     
-        self._node = self._node.astype({'name':np.int, 'value':np.float, 'demand':np.int, 'price':np.float})
+        self._node = self._node.astype({'name':int, 'value':float, 'demand':int, 'price':float})
 
         for seller in self.sellers():
             self.print_auction(seller)
@@ -64,9 +64,9 @@ class Auction(nxNode):
             #print("using node", v, '\n------------------------------\n')
             for u,w in self[v].index:
                 if name(u) == name(v):
-                    nbrs = nbrs.append(self._node.loc[self._node.name == name(w)]) 
+                    nbrs = pd.concat([nbrs, self._node.loc[self._node.name == name(w)]])
                 elif name(w) == name(v):
-                    nbrs = nbrs.append(self._node.loc[self._node.name == name(u)]) 
+                    nbrs = pd.concat([nbrs, self._node.loc[self._node.name == name(u)]])
             #print("\nNBRS1", list(nbrs.index))
             if ntype is not None and v in self and not nbrs.empty:
                 nbrs = nbrs.loc[ nbrs['type'] == ntype ]
@@ -138,12 +138,12 @@ class Auction(nxNode):
          
     def update_demand(self, node):
         global params
-        node.demand += 1*(-node.demand/abs(node.demand)) 
+        node.demand -= int(np.sign(node.demand))
         if node.demand == 0:
-            new_node = Node(params[node.type]) 
-            Node.names.append(node.name)
-            self.df_r.append(node.graph)
+            new_node = Node(params['buyer' if node.type == 'winner' else node.type])
+            self.df_r = pd.concat([self.df_r, node.graph])
             self.remove_node(node)
+            Node.names.append(node.name)
             #print("REMOVED", node.type, "NODE", node.name)
             self.add_star(new_node)
             #print("ADDED", new_node.type, "NODE", new_node.name)
@@ -210,22 +210,12 @@ class Auction(nxNode):
 
 # randomly sample from a list <-- should go in the class
 def rsample(x, maxn):
-    #print("IN RSAMPLE", x.index)
-    if len(x) < 2:
-        raise ValueError(f"sample set smaller than min set size")
-    if maxn < len(x):
-        u = random.sample(
-                        [n for n in list(x.index)],
-                        random.randint(2,maxn)
-                        )
-    else:
-        rsample(x, len(x)-1)
-    try:
-        #print("SAMPLE SET", u)
-        return u
-    except: 
-        raise(KeyError,ValueError)
-        return
+    population = list(x.index)
+    size = min(len(population), maxn)
+    if size < 2:
+        return population[:size]
+    return random.sample(population, random.randint(2, size))
+
 
 def random_choice(x):
     #print("IN CHOICE", x.index)

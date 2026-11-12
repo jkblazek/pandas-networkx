@@ -1,56 +1,28 @@
-networkx-pandas (mushed together, experimental)
----------------
+# pandas-networkx
 
-The auction holds all the live data, buyers and sellers
-and passes a dataframe up to the auctioneer every time a 
-players price changes. The memory in the auction is flash, 
-and is updated the next time a player challenges the price.
+An experimental market simulator that stores auction participants and graph edges in pandas. Buyers and sellers update bids and prices each round. The auctioneer records snapshots for the Plotly visualization.
 
-The auctioneer tells the auction where it is in time w.r.t to 
-the round it is playing, and stores history of how player's 
-connectivity influences the price over time. The auctioneer 
-also controls the clock, which determines where in time the price
-was influenced by previous rounds.
+## Setup
 
-Run the test.py script for an interactive shell with some nodes, an auction, and an auctioneer.
-The parameters are stored in csv, edit them like:
+Install Python 3.12, 3.13, or 3.14 and Poetry 2. NetworkX excludes Python 3.14.1, so use another patch release if you choose 3.14.
 
+```sh
+poetry sync
+poetry run python -m pytest
 ```
-	values = pd.read_csv('./params/params.dat')
-	values.loc[0,'nbuyers']=25
-	values.loc[0,'sellers']=17
-	f = open('./params/params.dat','w')
-	f.write(values.to_csv(index=False).strip())
-	f.close()
-	params=make_params()
 
-```
-The variables in the shell are:
-**Nested Nodes**
-```
-	nd, nds = test_node(params)
-```
-**Auction Objects**
-```
-	g = test_auction()
-	n=g._node
-	e=g._adj
-```
-**Auctioneer Objects**
-```
-print("Passed auction test...")
-	G = test_auctioneer()
-	N=G._node
-	E=G._adj
-	G.run_auctions(0)
+## Run the simulator
 
+Run the simulation in the terminal until you stop it with Ctrl+C.
+
+```sh
+poetry run python app.py
 ```
-**Market Object**
-This should keep running until you stop it.
+
+For the Dash view, pass `--dashboard` and open the local URL printed by Dash.
+
+```sh
+poetry run python app.py --dashboard
 ```
-	sim = MarketSim(make_params)
-	rnum=0
-	while True:
-		sim.do_round(rnum)
-		rnum+=1
-```
+
+Edit `params/params.dat` before running to change the number of buyers (`nbuyers`), sellers (`nsellers`), and other simulation settings. In an interactive Python session, `MarketSim(make_params)` runs the initial round, and `sim.do_round(1)` advances the simulation and returns the Plotly figure.

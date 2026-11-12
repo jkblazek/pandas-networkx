@@ -2,7 +2,7 @@ import random
 import networkx as nx
 import pandas as pd
 from termcolor import colored
-import os
+from pathlib import Path
 import time
 
 def make_params():
@@ -11,7 +11,7 @@ def make_params():
     rng = nx.utils.create_random_state()
     rng.seed(random.randint(1,999999))
 
-    df=pd.read_csv('./params/params.dat').loc[0]
+    df=pd.read_csv(Path(__file__).with_name('params.dat')).loc[0]
     nnodes = df.nbuyers+df.nsellers
 
     return pd.Series(dict(

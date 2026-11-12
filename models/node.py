@@ -69,9 +69,8 @@ class Node(nxNode):
         else:
             return 'buyer'
     
-    def __array__(self, dtype=np.dtype('object')):
-        return np.ndarray((7,),
-                buffer=np.array([
+    def __array__(self, dtype=None, copy=None):
+        return np.array([
                         int(self.name),
                         self.demand,
                         self.value,
@@ -79,8 +78,7 @@ class Node(nxNode):
                         self.color,
                         self.type,
                         self.ts
-                ], dtype=object),
-                dtype=object)
+                ], dtype=object if dtype is None else dtype)
     
     def __str__(self):
         return f"{self.__array__()}"

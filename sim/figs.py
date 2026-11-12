@@ -82,20 +82,15 @@ def go_scatter(sim, nodes, cscale, msize, rnum):
     ntype=[]
     ids=[]
     for k in range(max(0,rnum-5), rnum):
-        print("NODESK",nodes[k])
-        for j in nodes[k]['type']:
-            if j == 'seller':
-                x.append(k+0.5)
-            else:
-                x.append(k)
-        for j in nodes[k]['name']:
-            ids.append(j)
-            y.append(sim.auctioneer.layout[int(j)][1]) 
-        for j in nodes[k]['color']:
-            color.append(j)
-        for j in nodes[k]['type']:
-            ntype.append(j)
-    print("============================HERE============================")
+        round_nodes = nodes[k]
+        for node_id, node_type, node_color in zip(
+            round_nodes['name'], round_nodes['type'], round_nodes['color']
+        ):
+            x.append(k + 0.5 if node_type == 'seller' else k)
+            ids.append(node_id)
+            y.append(sim.auctioneer.layout[int(node_id)][1])
+            color.append(node_color)
+            ntype.append(node_type)
     return go.Scatter(
                 x=x,
                 y=y,
@@ -125,10 +120,10 @@ def go_line(sim, nodes, edges, cscale, rnum):
         print("EDGES", [(u[n],v[n]) for n in range(len(v))])
         for n in range(len(edges[k]['source'])):
             maxu = max(edges[k]['source'])
-            u = edges[k]['source'][n]
-            v = edges[k]['target'][n]
+            u = edges[k]['source'].iloc[n]
+            v = edges[k]['target'].iloc[n]
             x.append(k)
-            if edges[k]['type'][n] == 'bid':
+            if edges[k]['type'].iloc[n] == 'bid':
                 x.append(k+0.5)
             else:
                 x.append(k+1)
@@ -405,5 +400,3 @@ def update_scatter_plots(sim):
     corr_edges = dict([(k,link.loc[(link['v'] > 0) & (link['b'] != link['s'])]) for k,link in links])
     
     corr_nodes = dict([(k,corr_edges[k].drop(columns='v').stack()) for k in keys])
-
-

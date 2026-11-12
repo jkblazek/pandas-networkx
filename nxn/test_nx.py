@@ -1,45 +1,34 @@
-import pytest 
+import numpy as np
 
-@pytest.fixture
-def nodes():
-    nodes = []
-    for i in range(20):
-        nodes.append(nxNode(id=i, ts=1))
-    return nodes
-
-def test_nxnode():
-    n = nxNode()
-
-def test_add_node(nodes):
-    for i in range(20):
-        nodes.append(nxNode(id=i, ts=1))
-    n = nodes[0]
-    for i in range(1,len(nodes)):
-        n.add_node(nodes[i])
-
-def test_assignment(nodes):
-    ne=nodes[len(nodes)-1]
-    ne.price=200
-    n.add_node(ne)
+from nxn import nxNode
 
 
-def test_add_edge(nodes):
-    n1=nodes[1]
-    n2=nodes[2]
-    n3=nodes[3]
-    n4=nodes[4]
+class TestNode(nxNode):
+    __test__ = False
+    name = 0
+    index = ['name']
 
-    n.add_edge(n1,n2,ts=10)
-    n.add_edge(n3,n2,ts=11)
-    n.add_edge(n1,n2,ts=12)
-    n.add_edge(n1,n4,ts=13)
-    n.add_edge(n3,n4,ts=13)
+    def __init__(self, name):
+        self.name = name
+        super().__init__(name=name)
 
-def nodes():
-    nodes = []
-    for i in range(20):
-        node = nxNode(id=i, ts=i)
-        nodes.append(node)
-    return nodes
+    def __array__(self, dtype=None, copy=None):
+        return np.array([self.name], dtype=dtype)
 
 
+def test_add_nodes():
+    graph = nxNode()
+    node = TestNode(1)
+    graph.add_node(node)
+    graph.add_node(node)
+    assert list(graph.nodes()) == [node]
+
+
+def test_add_and_update_edge():
+    graph = nxNode()
+    source, target = TestNode(1), TestNode(2)
+    graph.add_edge(source, target, ts=10)
+    graph.add_edge(source, target, ts=12)
+
+    assert list(graph.edges()) == [(1, 2)]
+    assert graph[source].iloc[0]['ts'] == 12

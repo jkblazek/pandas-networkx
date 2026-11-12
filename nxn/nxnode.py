@@ -1,3 +1,4 @@
+from numbers import Real
 import random
 import numpy as np
 import networkx as nx
@@ -49,7 +50,7 @@ class _CachedPropertyResetterNode:
 def name(obj):
     if type(obj) == tuple:
         return (obj[0].name, obj[1].name)
-    elif type(obj) == int or type(obj) == float:
+    elif isinstance(obj, Real):
         return obj
     elif obj.name != None:
         return obj.name
@@ -88,7 +89,7 @@ class nxNode(nx.Graph):
                                                     columns=attr.keys()
                                                     )
         idx = self.graph_frame_factory({self})
-        self.graph.set_index(idx, inplace=True)
+        self.graph.index = idx
         self._adj = self.edge_attr_frame_factory() 
         self._node = self.node_attr_frame_factory() 
 
@@ -105,15 +106,13 @@ class nxNode(nx.Graph):
                                         [np.array(new_node)],
                                         columns=new_node.index
                                         )
-        _node.set_index(_idx, inplace=True)
+        _node.index = _idx
         if new_node in self:
-            self._node.update(_node)
+            dtypes = self._node.dtypes.reindex(_node.columns).dropna().to_dict()
+            self._node.update(_node.astype(dtypes))
         else:  
             #print("ADDING", new_node.type, "NODE", new_node.name, type(new_node), "at",  TS())
-            index = list(self._node.index)
-            self._node = self._node.append(_node)
-            index.append(new_node)
-            self._node.index = self.node_frame_factory(index)
+            self._node = pd.concat([self._node, _node])
 
     def add_edge(self, u, v, **attr):
         if u == v:
@@ -125,13 +124,13 @@ class nxNode(nx.Graph):
         index = pd.Index({(u.name, v.name)})
         df = self.edge_attr_frame_factory([attr], columns=columns)
         #print("DF",df)
-        df.set_index(index, inplace=True)
+        df.index = index
         key = (u,v)
         if key in self:
             self._adj.loc[name(key)]=df.loc[name(key)]
  
         else:
-            self._adj = self._adj.append(df)
+            self._adj = pd.concat([self._adj, df])
     
     def get_edge_data(self, u, v):
         idx = pd.IndexSlice
@@ -144,15 +143,12 @@ class nxNode(nx.Graph):
         return (u,v) in self._adj.index
  
     def remove_node(self, n):
-        #print("REMOVING NODE", n)
-        for e in self[n].index:
-            self._adj.drop(e, inplace=True)
-            del self[e]
-            #print("REMOVING EDGE", e)
+        incident_edges = self[n].index
+        if len(incident_edges):
+            self._adj = self._adj.drop(index=incident_edges)
         if n in self:
-           self._node.drop(n, inplace=True)
-           del self[n]
-    
+            self._node = self._node.loc[self._node.index != n]
+
     def nodes(self, data=False):
         return NodeView(self, data)
 
@@ -163,7 +159,7 @@ class nxNode(nx.Graph):
         return EdgeView(self, data)
 
     def neighbors(self, n):
-        return self[n].iteritems()
+        return self[n].items()
 
     def subgraph_view(self, ntype=None, n=None):
         newg = self.__class__()
@@ -218,17 +214,17 @@ class nxNode(nx.Graph):
             pass
         try:
             #print(self._adj.loc[idx[name(node),:],:])
-            nbrs = nbrs.append(self._adj.loc[idx[name(node),:],:])
+            nbrs = pd.concat([nbrs, self._adj.loc[idx[name(node), :], :]])
         except KeyError:
             pass
             #print("Node", node, "is not connected")
         try:
             #print(self._adj.loc[idx[:,name(node)],:])
             #print(type(self._adj.loc[idx[:,name(node)],:]))
-            nbrs = nbrs.append(self._adj.loc[idx[:,name(node)],:])
+            nbrs = pd.concat([nbrs, self._adj.loc[idx[:, name(node)], :]])
         except KeyError:
             pass
-        return nbrs.drop_duplicates()
+        return nbrs.loc[~nbrs.index.duplicated()]
 
     def __delitem__(self, node):
         if node in self:
